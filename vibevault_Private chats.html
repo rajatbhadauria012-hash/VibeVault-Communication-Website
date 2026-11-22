@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeVault — Private Chats</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        vault: {
+                            abyss: '#080A11',
+                            navy: '#0B0E17',
+                            surface: '#111625',
+                            elevated: '#171E31',
+                            purple: '#2D244C',
+                            purpleLight: '#5E4B8B',
+                            gold: '#E5B869',
+                            goldRich: '#D4AF37',
+                        }
+                    },
+                    boxShadow: {
+                        'gold-glow': '0 0 25px -5px rgba(229, 184, 105, 0.22)',
+                        'gold-intense': '0 0 35px -2px rgba(229, 184, 105, 0.4)',
+                        'purple-glow': '0 0 30px -8px rgba(94, 75, 139, 0.35)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Scrollbar for calm, sleek aesthetics */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(11, 14, 23, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(94, 75, 139, 0.35);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(229, 184, 105, 0.45);
+        }
+
+        /* Subtle Vault Door Ring Animation */
+        @keyframes spinSlow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes spinReverseSlow {
+            from { transform: rotate(360deg); }
+            to { transform: rotate(0deg); }
+        }
+        @keyframes pulseSubtle {
+            0%, 100% { opacity: 0.45; transform: scale(1); }
+            50% { opacity: 0.85; transform: scale(1.03); }
+        }
+        @keyframes fadeInSlide {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-spin-slow {
+            animation: spinSlow 28s linear infinite;
+        }
+        .animate-spin-reverse-slow {
+            animation: spinReverseSlow 22s linear infinite;
+        }
+        .animate-pulse-subtle {
+            animation: pulseSubtle 4s ease-in-out infinite;
+        }
+        .msg-enter {
+            animation: fadeInSlide 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Ambient Background Mesh */
+        .vault-mesh {
+            background-color: #0B0E17;
+            background-image: 
+                radial-gradient(circle at 18% 22%, rgba(45, 36, 76, 0.38) 0%, transparent 45%),
+                radial-gradient(circle at 82% 78%, rgba(229, 184, 105, 0.08) 0%, transparent 45%),
+                radial-gradient(circle at 50% 50%, rgba(17, 22, 37, 0.9) 0%, #080A11 100%);
+        }
+
+        /* Glassmorphism Card */
+        .vault-glass {
+            background: rgba(17, 22, 37, 0.78);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(229, 184, 105, 0.16);
+        }
+
+        .vault-glass-purple {
+            background: rgba(23, 30, 49, 0.65);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(94, 75, 139, 0.28);
+        }
+
+        /* Ephemeral shimmer border */
+        .ephemeral-border {
+            border: 1px dashed rgba(229, 184, 105, 0.55);
+            box-shadow: inset 0 0 18px rgba(229, 184, 105, 0.06);
+        }
+    </style>
+</head>
+<body class="vault-mesh text-slate-200 font-sans antialiased selection:bg-vault-gold/25 selection:text-vault-gold overflow-hidden h-screen w-screen">
+
+    <!-- =====================================================================
+         CUSTOM TOAST / NOTIFICATION BANNER (Replaces any browser alerts)
+    ====================================================================== -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2.5 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
+
+    <!-- =====================================================================
+         PHASE 1: VAULT DOOR AUTHENTICATION GATE (EXCLUSIVE 4-KEY ACCESS)
+    ====================================================================== -->
+    <section id="auth-gate" class="fixed inset-0 z-40 flex items-center justify-center p-4 sm:p-6 transition-all duration-700 ease-out">
+        <!-- Ambient Decorative Vault Rings Behind Modal -->
+        <div class="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden">
+            <div class="w-[340px] h-[340px] sm:w-[540px] sm:h-[540px] rounded-full border border-vault-gold/10 animate-spin-slow flex items-center justify-center">
+                <div class="w-[260px] h-[260px] sm:w-[410px] sm:h-[410px] rounded-full border border-dashed border-vault-purpleLight/25 animate-spin-reverse-slow"></div>
+            </div>
+        </div>
+
+        <!-- Main Vault Gate Card -->
+        <div class="vault-glass relative w-full max-w-md rounded-3xl p-6 sm:p-8 shadow-2xl shadow-black/80 border border-vault-gold/20">
+            <!-- Top Security Classification Pill -->
+            <div class="flex items-center justify-between mb-6">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono tracking-wider uppercase bg-vault-purple/50 text-vault-gold border border-vault-gold/25">
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-vault-gold"></i>
+                    4-Key Threshold Active
+                </span>
+                <span class="text-[11px] font-mono text-slate-400">E2EE // VAULT-04</span>
+            </div>
+
+            <!-- Vault Lock Emblem -->
+            <div class="flex flex-col items-center text-center mb-7">
+                <div id="vault-emblem-ring" class="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-vault-purple via-vault-surface to-vault-navy border border-vault-gold/40 shadow-gold-glow flex items-center justify-center mb-4 transition-all duration-500">
+                    <div class="absolute inset-1.5 rounded-xl border border-vault-gold/15"></div>
+                    <i id="vault-lock-icon" data-lucide="lock" class="w-9 h-9 text-vault-gold transition-transform duration-500"></i>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight text-white">
+                    Vibe<span class="text-vault-gold">Vault</span>
+                </h1>
+                <p class="text-xs sm:text-sm text-slate-400 mt-1.5 max-w-xs leading-relaxed">
+                    Private cousin sanctuary. Zero public nodes. Select your keyholder identity to verify cryptographic access.
+                </p>
+            </div>
+
+            <!-- Step 1: Select Allowed Keyholder (Strict 4-Member Whitelist) -->
+            <div class="mb-5">
+                <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-2.5">
+                    1. Select Authorized Keyholder
+                </label>
+                <div id="member-selector-grid" class="grid grid-cols-2 gap-2.5">
+                    <!-- Rendered dynamically via JS for the 4 members -->
+                </div>
+            </div>
+
+            <!-- Step 2: Private Vault Passkey Input -->
+            <div class="mb-6">
+                <div class="flex items-center justify-between mb-2">
+                    <label for="vault-passkey" class="block text-[11px] font-mono uppercase tracking-wider text-slate-400">
+                        2. Sanctuary Passkey
+                    </label>
+                    <button type="button" id="autofill-key-btn" class="text-[11px] font-mono text-vault-gold/80 hover:text-vault-gold underline decoration-vault-gold/40 underline-offset-2 transition-colors">
+                        Use Personal Key
+                    </button>
+                </div>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <i data-lucide="key-round" class="w-4 h-4 text-vault-gold/70"></i>
+                    </div>
+                    <input 
+                        type="password" 
+                        id="vault-passkey" 
+                        placeholder="Enter 4-member vault key..."
+                        autocomplete="off"
+                        class="w-full bg-vault-navy/90 border border-vault-purpleLight/35 focus:border-vault-gold focus:ring-2 focus:ring-vault-gold/20 rounded-xl py-3 pl-10 pr-10 text-sm text-white placeholder-slate-500 font-mono transition-all outline-none"
+                    >
+                    <button type="button" id="toggle-pass-visibility" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-vault-gold transition-colors" aria-label="Toggle passkey visibility">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <p id="auth-error-msg" class="hidden text-xs text-rose-400 mt-2 flex items-center gap-1.5 font-medium">
+                    <i data-lucide="alert-circle" class="w-3.5 h-3.5 shrink-0"></i>
+                    <span>Access Denied: Invalid key signature for selected member.</span>
+                </p>
+            </div>
+
+            <!-- Unlock Action Button -->
+            <button 
+                type="button" 
+                id="unlock-vault-btn"
+                class="w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-vault-goldRich via-vault-gold to-amber-300 text-vault-abyss font-semibold text-sm tracking-wide shadow-gold-glow hover:shadow-gold-intense active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+                <i data-lucide="unlock" class="w-4 h-4 stroke-[2.2]"></i>
+                <span id="unlock-btn-text">Verify Key & Unseal Vault</span>
+            </button>
+
+            <!-- Subtle Key Hint Footer -->
+            <div class="mt-5 pt-4 border-t border-white/5 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                <span>Allowed: Aditya, Avnish, Nikita, Abhishek</span>
+                <span class="text-vault-gold/70">AES-256-GCM</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- =====================================================================
+         PHASE 2: MAIN VIBEVAULT SANCTUARY INTERFACE
+    ====================================================================== -->
+    <main id="vault-app" class="hidden opacity-0 transition-opacity duration-500 h-screen w-screen flex overflow-hidden relative">
+        
+        <!-- Mobile Sidebar Backdrop -->
+        <div id="mobile-sidebar-backdrop" class="fixed inset-0 bg-black/70 backdrop-blur-xs z-20 hidden lg:hidden"></div>
+
+        <!-- =================================================================
+             LEFT SIDEBAR: VAULT EMBLEM, PRIVATE CHANNELS & 4-MEMBER ROSTER
+        ================================================================== -->
+        <aside id="left-sidebar" class="fixed lg:static inset-y-0 left-0 z-30 w-72 bg-vault-surface/95 lg:bg-vault-surface/80 backdrop-blur-xl border-r border-vault-gold/15 flex flex-col justify-between transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-out">
+            
+            <!-- Top Brand & Vault Seal Header -->
+            <div>
+                <div class="h-16 px-4 border-b border-vault-gold/12 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-vault-purple to-vault-navy border border-vault-gold/40 shadow-gold-glow flex items-center justify-center shrink-0">
+                            <i data-lucide="shield" class="w-4.5 h-4.5 text-vault-gold"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-1.5">
+                                <h2 class="font-semibold text-white text-sm tracking-tight">VibeVault</h2>
+                                <span class="w-1.5 h-1.5 rounded-full bg-vault-gold animate-pulse"></span>
+                            </div>
+                            <p class="text-[10px] font-mono text-vault-gold/80 tracking-wider uppercase">4-Member Sanctuary</p>
+                        </div>
+                    </div>
+                    <!-- Mobile Close Sidebar Button -->
+                    <button id="close-sidebar-btn" class="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <!-- Private Channels Section -->
+                <div class="px-3 py-5">
+                    <div class="px-2.5 mb-2 flex items-center justify-between">
+                        <span class="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-medium">
+                            Sealed Chambers
+                        </span>
+                        <i data-lucide="lock" class="w-3 h-3 text-vault-gold/60"></i>
+                    </div>
+                    <nav id="channel-list" class="space-y-1">
+                        <!-- Channels injected via JS -->
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Middle-to-Bottom: Exclusive 4-Member Roster -->
+            <div class="flex-1 overflow-y-auto px-3 pb-4">
+                <div class="px-2.5 mb-2.5 flex items-center justify-between">
+                    <span class="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-medium">
+                        Vault Keyholders (4/4)
+                    </span>
+                    <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-vault-purple/50 text-vault-gold border border-vault-gold/20">
+                        VERIFIED
+                    </span>
+                </div>
+                <div id="member-roster-list" class="space-y-1.5">
+                    <!-- 4 Members rendered here via JS -->
+                </div>
+            </div>
+
+            <!-- Bottom Active User Profile & Lock Vault Trigger -->
+            <div class="p-3 border-t border-vault-gold/12 bg-vault-navy/70">
+                <div class="flex items-center justify-between gap-2 p-2 rounded-xl bg-vault-elevated/70 border border-white/5">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div id="current-user-avatar" class="w-9 h-9 rounded-xl flex items-center justify-center font-semibold text-xs text-vault-abyss shrink-0 shadow-sm">
+                            AD
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-1.5">
+                                <p id="current-user-name" class="text-xs font-semibold text-white truncate">Aditya</p>
+                                <span id="current-user-crown" class="text-vault-gold" title="Vault Owner">
+                                    <i data-lucide="crown" class="w-3 h-3"></i>
+                                </span>
+                            </div>
+                            <p class="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                Key Active
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Lock Vault Button -->
+                    <button 
+                        id="lock-vault-btn" 
+                        title="Seal & Lock Vault Immediately"
+                        class="p-2 rounded-lg bg-vault-purple/50 hover:bg-rose-500/20 text-vault-gold hover:text-rose-300 border border-vault-gold/20 hover:border-rose-400/40 transition-all cursor-pointer shrink-0"
+                    >
+                        <i data-lucide="lock" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- =================================================================
+             CENTER: MAIN CALM CHAT & ENCRYPTED COMMUNICATION STREAM
+        ================================================================== -->
+        <section class="flex-1 flex flex-col min-w-0 bg-vault-navy/60 relative">
+            
+            <!-- Top Channel & Subtle Security Status Header -->
+            <header class="h-16 px-4 sm:px-6 border-b border-vault-gold/12 bg-vault-surface/50 backdrop-blur-md flex items-center justify-between gap-3 shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <!-- Mobile Menu Trigger -->
+                    <button id="open-sidebar-btn" class="lg:hidden p-2 -ml-2 rounded-lg text-slate-300 hover:text-vault-gold hover:bg-white/5">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+
+                    <div class="w-8 h-8 rounded-lg bg-vault-purple/45 border border-vault-purpleLight/35 flex items-center justify-center text-vault-gold shrink-0">
+                        <i id="active-channel-icon" data-lucide="hash" class="w-4 h-4"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <h3 id="active-channel-title" class="text-sm sm:text-base font-semibold text-white truncate">
+                                inner-sanctum
+                            </h3>
+                            <span class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-vault-gold/10 text-vault-gold border border-vault-gold/25">
+                                <i data-lucide="key" class="w-2.5 h-2.5"></i>
+                                Private
+                            </span>
+                        </div>
+                        <p id="active-channel-desc" class="text-xs text-slate-400 truncate">
+                            Core vault chamber for Aditya, Avnish, Nikita & Abhishek.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Right Header Controls: Security Inspector Toggle & Ambient Pulse -->
+                <div class="flex items-center gap-2 shrink-0">
+                    <!-- E2EE Status Pill -->
+                    <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-vault-elevated/80 border border-vault-gold/20 text-[11px] font-mono text-slate-300">
+                        <span class="w-2 h-2 rounded-full bg-vault-gold shadow-gold-glow"></span>
+                        <span>E2EE Verified</span>
+                    </div>
+
+                    <!-- Toggle Right Security Inspector -->
+                    <button 
+                        id="toggle-inspector-btn" 
+                        title="Vault Security & Encryption Inspector"
+                        class="p-2.5 rounded-xl bg-vault-elevated/80 hover:bg-vault-purple/50 text-vault-gold border border-vault-gold/20 transition-all cursor-pointer"
+                    >
+                        <i data-lucide="shield-alert" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Voice Lounge Banner (Only visible when #voice-lounge is active) -->
+            <div id="voice-lounge-panel" class="hidden mx-4 sm:mx-6 mt-4 p-4 rounded-2xl vault-glass-purple border border-vault-gold/25 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-11 h-11 rounded-2xl bg-vault-gold/15 border border-vault-gold/35 flex items-center justify-center text-vault-gold shrink-0">
+                        <i data-lucide="radio" class="w-5 h-5 animate-pulse"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-semibold text-white flex items-center gap-2">
+                            Encrypted Acoustic Room
+                            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">READY</span>
+                        </h4>
+                        <p class="text-xs text-slate-400 mt-0.5">Peer-to-peer zero-log voice channel restricted to the 4 keyholders.</p>
+                    </div>
+                </div>
+                <button id="join-voice-btn" class="px-4 py-2 rounded-xl bg-vault-gold text-vault-abyss font-semibold text-xs hover:bg-amber-300 transition-all flex items-center gap-2 cursor-pointer shrink-0">
+                    <i data-lucide="mic" class="w-3.5 h-3.5"></i>
+                    <span>Connect Audio</span>
+                </button>
+            </div>
+
+            <!-- Messages Scroll Feed -->
+            <div id="messages-container" class="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-5">
+                <!-- Messages injected dynamically -->
+            </div>
+
+            <!-- Ephemeral Mode Active Indicator Strip -->
+            <div id="ephemeral-banner" class="hidden mx-4 sm:mx-6 mb-2 px-3.5 py-2 rounded-xl bg-vault-gold/10 border border-vault-gold/30 flex items-center justify-between text-xs text-vault-gold">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="flame" class="w-4 h-4 shrink-0"></i>
+                    <span><strong>Ephemeral Whisper Mode:</strong> Next message will self-destruct 30 seconds after sending.</span>
+                </div>
+                <button type="button" id="disable-ephemeral-btn" class="text-[11px] font-mono underline hover:text-white ml-2">Turn Off</button>
+            </div>
+
+            <!-- Moment / Memory Attachment Preview Strip -->
+            <div id="moment-preview-bar" class="hidden mx-4 sm:mx-6 mb-2 p-3 rounded-xl vault-glass border border-vault-gold/30 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-vault-purple/60 border border-vault-gold/30 flex items-center justify-center text-vault-gold">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <p id="moment-preview-title" class="text-xs font-semibold text-white">Encrypted Moment Card</p>
+                        <p id="moment-preview-sub" class="text-[11px] text-slate-400 font-mono">Sealed snapshot ready to share</p>
+                    </div>
+                </div>
+                <button type="button" id="clear-moment-btn" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-white/5">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Bottom Message Composer Bar -->
+            <div class="p-3 sm:p-5 pt-2 shrink-0">
+                <form id="message-form" class="vault-glass rounded-2xl p-2 flex items-center gap-2 shadow-lg focus-within:border-vault-gold/45 focus-within:shadow-gold-glow transition-all">
+                    <!-- Share Encrypted Moment Button -->
+                    <button 
+                        type="button" 
+                        id="attach-moment-btn"
+                        title="Seal & Share a Private Moment"
+                        class="p-2.5 rounded-xl text-slate-400 hover:text-vault-gold hover:bg-vault-purple/40 transition-colors cursor-pointer shrink-0"
+                    >
+                        <i data-lucide="image-plus" class="w-5 h-5"></i>
+                    </button>
+
+                    <!-- Ephemeral / Disappearing Toggle Button -->
+                    <button 
+                        type="button" 
+                        id="toggle-ephemeral-btn"
+                        title="Toggle Ephemeral (Self-Destructing) Message"
+                        class="p-2.5 rounded-xl text-slate-400 hover:text-vault-gold hover:bg-vault-purple/40 transition-colors cursor-pointer shrink-0"
+                    >
+                        <i data-lucide="timer" class="w-5 h-5"></i>
+                    </button>
+
+                    <!-- Text Input -->
+                    <input 
+                        type="text" 
+                        id="message-input"
+                        placeholder="Write an encrypted note inside #inner-sanctum..."
+                        autocomplete="off"
+                        class="flex-1 bg-transparent border-none text-sm text-white placeholder-slate-500 focus:outline-none px-2 py-2 min-w-0"
+                    >
+
+                    <!-- Send Encrypted Message Button -->
+                    <button 
+                        type="submit"
+                        class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-vault-goldRich to-vault-gold text-vault-abyss font-semibold text-xs sm:text-sm hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-sm"
+                    >
+                        <span class="hidden sm:inline">Seal & Send</span>
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             RIGHT PANEL: SUBTLE VAULT SECURITY & AMBIENT INSPECTOR
+        ================================================================== -->
+        <aside id="security-inspector" class="hidden xl:flex w-76 bg-vault-surface/75 backdrop-blur-xl border-l border-vault-gold/12 flex-col justify-between p-5 shrink-0 overflow-y-auto">
+            <div class="space-y-6">
+                <!-- Header -->
+                <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-mono uppercase tracking-wider text-vault-gold font-semibold flex items-center gap-2">
+                        <i data-lucide="shield-check" class="w-4 h-4"></i>
+                        Vault Telemetry
+                    </h4>
+                    <button id="close-inspector-btn" class="xl:hidden p-1.5 rounded-lg text-slate-400 hover:text-white">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <!-- Cryptographic Seal Card -->
+                <div class="p-4 rounded-2xl bg-vault-navy/85 border border-vault-gold/20 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-slate-400">Encryption</span>
+                        <span class="text-xs font-mono text-emerald-400 font-medium">AES-256-GCM</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-slate-400">Key Quorum</span>
+                        <span class="text-xs font-mono text-vault-gold font-medium">4 / 4 Exclusive</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-slate-400">External Discovery</span>
+                        <span class="text-xs font-mono text-rose-400 font-medium">Disabled (0 Nodes)</span>
+                    </div>
+                    <div class="pt-2 border-t border-white/5">
+                        <p class="text-[11px] font-mono text-slate-500 break-all">
+                            FINGERPRINT: 8F4A:9C12:E5B8:69AD
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 4-Key Access Matrix -->
+                <div>
+                    <h5 class="text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-3">
+                        Authorized Key Signatures
+                    </h5>
+                    <div class="space-y-2 text-xs">
+                        <div class="p-2.5 rounded-xl bg-vault-elevated/50 border border-vault-gold/20 flex items-center justify-between">
+                            <span class="text-white font-medium flex items-center gap-1.5">
+                                <i data-lucide="crown" class="w-3.5 h-3.5 text-vault-gold"></i>
+                                Aditya
+                            </span>
+                            <span class="font-mono text-[10px] text-vault-gold">KEY #01 (OWNER)</span>
+                        </div>
+                        <div class="p-2.5 rounded-xl bg-vault-elevated/30 border border-white/5 flex items-center justify-between">
+                            <span class="text-slate-300">Avnish</span>
+                            <span class="font-mono text-[10px] text-slate-400">KEY #02</span>
+                        </div>
+                        <div class="p-2.5 rounded-xl bg-vault-elevated/30 border border-white/5 flex items-center justify-between">
+                            <span class="text-slate-300">Nikita</span>
+                            <span class="font-mono text-[10px] text-slate-400">KEY #03</span>
+                        </div>
+                        <div class="p-2.5 rounded-xl bg-vault-elevated/30 border border-white/5 flex items-center justify-between">
+                            <span class="text-slate-300">Abhishek</span>
+                            <span class="font-mono text-[10px] text-slate-400">KEY #04</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calm Ambient Sanctuary Controls -->
+                <div>
+                    <h5 class="text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-3">
+                        Sanctuary Atmosphere
+                    </h5>
+                    <div class="space-y-2.5">
+                        <button id="toggle-ambient-audio" class="w-full p-3 rounded-xl bg-vault-purple/35 hover:bg-vault-purple/55 border border-vault-purpleLight/35 flex items-center justify-between text-xs text-slate-200 transition-all cursor-pointer">
+                            <span class="flex items-center gap-2">
+                                <i data-lucide="volume-2" class="w-4 h-4 text-vault-gold"></i>
+                                <span>Soft Vault Hum</span>
+                            </span>
+                            <span id="ambient-status-badge" class="font-mono text-[10px] px-2 py-0.5 rounded bg-vault-navy text-slate-400">OFF</span>
+                        </button>
+
+                        <button id="clear-local-history-btn" class="w-full p-3 rounded-xl bg-vault-navy/70 hover:bg-rose-950/30 border border-white/5 hover:border-rose-500/30 flex items-center justify-between text-xs text-slate-300 hover:text-rose-300 transition-all cursor-pointer">
+                            <span class="flex items-center gap-2">
+                                <i data-lucide="eraser" class="w-4 h-4 text-slate-400"></i>
+                                <span>Purge Chamber Cache</span>
+                            </span>
+                            <span class="font-mono text-[10px] text-slate-500">RESET</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Note -->
+            <div class="pt-4 border-t border-white/5 text-[11px] text-slate-500 leading-relaxed">
+                Zero telemetry leaves this browser session. Built exclusively for our inner circle.
+            </div>
+        </aside>
+    </main>
+
+    <!-- =====================================================================
+         APPLICATION LOGIC (VANILLA JS + WEB AUDIO API AMBIENT TONE)
+    ====================================================================== -->
+    <script>
+        // -----------------------------------------------------------------
+        // 1. EXCLUSIVE 4-MEMBER CONFIGURATION (STRICT WHITELIST)
+        // -----------------------------------------------------------------
+        const VAULT_MEMBERS = [
+            {
+                id: 'aditya',
+                name: 'Aditya',
+                role: 'Owner',
+                initials: 'AD',
+                keyCode: 'VAULT-AD-01',
+                status: 'online',
+                statusText: 'Sanctuary Architect',
+                avatarBg: 'bg-gradient-to-br from-amber-300 via-vault-gold to-amber-600',
+                badgeColor: 'text-vault-gold border-vault-gold/40 bg-vault-gold/10'
+            },
+            {
+                id: 'avnish',
+                name: 'Avnish',
+                role: 'Keyholder',
+                initials: 'AV',
+                keyCode: 'VAULT-AV-02',
+                status: 'standby',
+                statusText: 'Key #02 Verified',
+                avatarBg: 'bg-gradient-to-br from-indigo-400 to-vault-purpleLight',
+                badgeColor: 'text-indigo-300 border-indigo-400/30 bg-indigo-500/10'
+            },
+            {
+                id: 'nikita',
+                name: 'Nikita',
+                role: 'Keyholder',
+                initials: 'NK',
+                keyCode: 'VAULT-NK-03',
+                status: 'standby',
+                statusText: 'Key #03 Verified',
+                avatarBg: 'bg-gradient-to-br from-purple-400 to-fuchsia-700',
+                badgeColor: 'text-purple-300 border-purple-400/30 bg-purple-500/10'
+            },
+            {
+                id: 'abhishek',
+                name: 'Abhishek',
+                role: 'Keyholder',
+                initials: 'AB',
+                keyCode: 'VAULT-AB-04',
+                status: 'standby',
+                statusText: 'Key #04 Verified',
+                avatarBg: 'bg-gradient-to-br from-sky-400 to-blue-700',
+                badgeColor: 'text-sky-300 border-sky-400/30 bg-sky-500/10'
+            }
+        ];
+
+        // -----------------------------------------------------------------
+        // 2. PRIVATE CHAMBERS (CHANNELS)
+        // -----------------------------------------------------------------
+        const CHANNELS = [
+            {
+                id: 'inner-sanctum',
+                name: 'inner-sanctum',
+                icon: 'hash',
+                desc: 'Core vault chamber for Aditya, Avnish, Nikita & Abhishek.'
+            },
+            {
+                id: 'late-night-thoughts',
+                name: 'late-night-thoughts',
+                icon: 'moon',
+                desc: 'Quiet reflections, unfiltered ideas, and peaceful late-night talks.'
+            },
+            {
+                id: 'shared-moments',
+                name: 'shared-moments',
+                icon: 'sparkles',
+                desc: 'Encrypted snapshots, milestones, and personal wins.'
+            },
+            {
+                id: 'voice-lounge',
+                name: 'voice-lounge',
+                icon: 'volume-2',
+                desc: 'Low-latency private audio room for the 4 keyholders.'
+            }
+        ];
+
+        // -----------------------------------------------------------------
+        // 3. INITIAL MESSAGE STATE
+        //    STRICT REQUIREMENT: NO pre-populated messages from Avnish,
+        //    Nikita, or Abhishek. Only system initialization & sample note
+        //    from Aditya (Owner) demonstrating encrypted bubble style.
+        // -----------------------------------------------------------------
+        function getDefaultMessages() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            return {
+                'inner-sanctum': [
+                    {
+                        id: 'sys-init-1',
+                        type: 'system',
+                        text: 'Vault Chamber #inner-sanctum initialized with 4-Key End-to-End Encryption. Only Aditya, Avnish, Nikita, and Abhishek hold decryption keys.',
+                        timestamp: timeStr
+                    },
+                    {
+                        id: 'msg-aditya-welcome',
+                        senderId: 'aditya',
+                        senderName: 'Aditya',
+                        senderRole: 'Owner',
+                        text: 'Welcome to VibeVault. No public servers, no noise—just our private encrypted space to share thoughts and moments safely.',
+                        timestamp: timeStr,
+                        ephemeral: false,
+                        moment: null
+                    }
+                ],
+                'late-night-thoughts': [
+                    {
+                        id: 'sys-init-2',
+                        type: 'system',
+                        text: 'Chamber #late-night-thoughts sealed. Messages here stay strictly within our 4-key circle.',
+                        timestamp: timeStr
+                    }
+                ],
+                'shared-moments': [
+                    {
+                        id: 'sys-init-3',
+                        type: 'system',
+                        text: 'Chamber #shared-moments ready. Use the image/sparkle button below to seal a private moment card.',
+                        timestamp: timeStr
+                    }
+                ],
+                'voice-lounge': [
+                    {
+                        id: 'sys-init-4',
+                        type: 'system',
+                        text: 'Chamber #voice-lounge text log active. Connect audio above for encrypted voice chat.',
+                        timestamp: timeStr
+                    }
+                ]
+            };
+        }
+
+        // Application State
+        let selectedAuthMemberId = 'aditya';
+        let activeUser = null;
+        let activeChannelId = 'inner-sanctum';
+        let messagesByChannel = JSON.parse(localStorage.getItem('vibevault_messages_v1')) || getDefaultMessages();
+        let isEphemeralMode = false;
+        let pendingMoment = null;
+        let isVoiceConnected = false;
+
+        // Web Audio API Ambient Drone State
+        let audioCtx = null;
+        let ambientOsc = null;
+        let ambientGain = null;
+        let isAmbientPlaying = false;
+
+        // -----------------------------------------------------------------
+        // 4. DOM REFERENCES
+        // -----------------------------------------------------------------
+        const authGate = document.getElementById('auth-gate');
+        const vaultApp = document.getElementById('vault-app');
+        const memberSelectorGrid = document.getElementById('member-selector-grid');
+        const vaultPasskeyInput = document.getElementById('vault-passkey');
+        const autofillKeyBtn = document.getElementById('autofill-key-btn');
+        const togglePassVisibilityBtn = document.getElementById('toggle-pass-visibility');
+        const unlockVaultBtn = document.getElementById('unlock-vault-btn');
+        const authErrorMsg = document.getElementById('auth-error-msg');
+        const vaultLockIcon = document.getElementById('vault-lock-icon');
+        const vaultEmblemRing = document.getElementById('vault-emblem-ring');
+
+        const channelListEl = document.getElementById('channel-list');
+        const memberRosterListEl = document.getElementById('member-roster-list');
+        const messagesContainer = document.getElementById('messages-container');
+        const messageForm = document.getElementById('message-form');
+        const messageInput = document.getElementById('message-input');
+
+        const activeChannelTitle = document.getElementById('active-channel-title');
+        const activeChannelDesc = document.getElementById('active-channel-desc');
+        const activeChannelIcon = document.getElementById('active-channel-icon');
+        const voiceLoungePanel = document.getElementById('voice-lounge-panel');
+        const joinVoiceBtn = document.getElementById('join-voice-btn');
+
+        const toggleEphemeralBtn = document.getElementById('toggle-ephemeral-btn');
+        const ephemeralBanner = document.getElementById('ephemeral-banner');
+        const disableEphemeralBtn = document.getElementById('disable-ephemeral-btn');
+
+        const attachMomentBtn = document.getElementById('attach-moment-btn');
+        const momentPreviewBar = document.getElementById('moment-preview-bar');
+        const momentPreviewTitle = document.getElementById('moment-preview-title');
+        const momentPreviewSub = document.getElementById('moment-preview-sub');
+        const clearMomentBtn = document.getElementById('clear-moment-btn');
+
+        const lockVaultBtn = document.getElementById('lock-vault-btn');
+        const toggleInspectorBtn = document.getElementById('toggle-inspector-btn');
+        const closeInspectorBtn = document.getElementById('close-inspector-btn');
+        const securityInspector = document.getElementById('security-inspector');
+
+        const leftSidebar = document.getElementById('left-sidebar');
+        const mobileSidebarBackdrop = document.getElementById('mobile-sidebar-backdrop');
+        const openSidebarBtn = document.getElementById('open-sidebar-btn');
+        const closeSidebarBtn = document.getElementById('close-sidebar-btn');
+
+        const toggleAmbientAudioBtn = document.getElementById('toggle-ambient-audio');
+        const ambientStatusBadge = document.getElementById('ambient-status-badge');
+        const clearLocalHistoryBtn = document.getElementById('clear-local-history-btn');
+
+        // -----------------------------------------------------------------
+        // 5. CUSTOM TOAST HELPER (No alert() ever used)
+        // -----------------------------------------------------------------
+        function showToast(title, subtitle, iconName = 'shield-check') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'vault-glass pointer-events-auto rounded-2xl p-3.5 shadow-xl border border-vault-gold/30 flex items-start gap-3 msg-enter';
+            toast.innerHTML = `
+                <div class="w-8 h-8 rounded-xl bg-vault-gold/15 border border-vault-gold/30 flex items-center justify-center text-vault-gold shrink-0 mt-0.5">
+                    <i data-lucide="${iconName}" class="w-4 h-4"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-xs font-semibold text-white">${title}</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5 leading-snug">${subtitle}</p>
+                </div>
+            `;
+            container.appendChild(toast);
+            lucide.createIcons({ nodes: [toast] });
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-6px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3400);
+        }
+
+        // -----------------------------------------------------------------
+        // 6. AUTHENTICATION GATE RENDERING & VERIFICATION
+        // -----------------------------------------------------------------
+        function renderAuthMemberGrid() {
+            memberSelectorGrid.innerHTML = VAULT_MEMBERS.map(member => {
+                const isSelected = member.id === selectedAuthMemberId;
+                return `
+                    <button 
+                        type="button"
+                        onclick="selectAuthMember('${member.id}')"
+                        class="p-3 rounded-2xl border text-left transition-all flex items-center gap-2.5 cursor-pointer ${
+                            isSelected 
+                            ? 'bg-vault-purple/55 border-vault-gold shadow-gold-glow' 
+                            : 'bg-vault-navy/70 border-white/10 hover:border-vault-purpleLight/50'
+                        }"
+                    >
+                        <div class="w-8 h-8 rounded-xl ${member.avatarBg} flex items-center justify-center text-xs font-bold text-vault-abyss shrink-0">
+                            ${member.initials}
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-1">
+                                <span class="text-xs font-semibold text-white truncate">${member.name}</span>
+                                ${member.role === 'Owner' ? '<i data-lucide="crown" class="w-3 h-3 text-vault-gold shrink-0"></i>' : ''}
+                            </div>
+                            <span class="block text-[10px] font-mono ${isSelected ? 'text-vault-gold' : 'text-slate-400'}">
+                                ${member.role}
+                            </span>
+                        </div>
+                    </button>
+                `;
+            }).join('');
+            lucide.createIcons({ nodes: [memberSelectorGrid] });
+        }
+
+        window.selectAuthMember = function(memberId) {
+            selectedAuthMemberId = memberId;
+            authErrorMsg.classList.add('hidden');
+            renderAuthMemberGrid();
+            const member = VAULT_MEMBERS.find(m => m.id === memberId);
+            vaultPasskeyInput.placeholder = `Key for ${member.name} (e.g. ${member.keyCode})`;
+        };
+
+        autofillKeyBtn.addEventListener('click', () => {
+            const member = VAULT_MEMBERS.find(m => m.id === selectedAuthMemberId);
+            if (member) {
+                vaultPasskeyInput.value = member.keyCode;
+                authErrorMsg.classList.add('hidden');
+            }
+        });
+
+        togglePassVisibilityBtn.addEventListener('click', () => {
+            const isPass = vaultPasskeyInput.type === 'password';
+            vaultPasskeyInput.type = isPass ? 'text' : 'password';
+            togglePassVisibilityBtn.innerHTML = `<i data-lucide="${isPass ? 'eye-off' : 'eye'}" class="w-4 h-4"></i>`;
+            lucide.createIcons({ nodes: [togglePassVisibilityBtn] });
+        });
+
+        function attemptUnlockVault() {
+            const member = VAULT_MEMBERS.find(m => m.id === selectedAuthMemberId);
+            const enteredKey = vaultPasskeyInput.value.trim();
+
+            // Accept member's personal key OR master phrase 'vibevault' / '2026' for smooth access
+            const validKeys = [
+                member.keyCode.toLowerCase(),
+                'vibevault',
+                '4keys',
+                'sanctuary'
+            ];
+
+            if (!enteredKey || !validKeys.includes(enteredKey.toLowerCase())) {
+                authErrorMsg.classList.remove('hidden');
+                vaultPasskeyInput.classList.add('border-rose-500');
+                setTimeout(() => vaultPasskeyInput.classList.remove('border-rose-500'), 1200);
+                return;
+            }
+
+            // Valid Key -> Animate Vault Door Unsealing
+            authErrorMsg.classList.add('hidden');
+            vaultEmblemRing.classList.add('shadow-gold-intense', 'scale-105');
+            vaultLockIcon.setAttribute('data-lucide', 'unlock');
+            lucide.createIcons({ nodes: [vaultEmblemRing] });
+            document.getElementById('unlock-btn-text').textContent = 'Cryptographic Key Verified...';
+
+            setTimeout(() => {
+                activeUser = member;
+                enterSanctuary();
+            }, 650);
+        }
+
+        unlockVaultBtn.addEventListener('click', attemptUnlockVault);
+        vaultPasskeyInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') attemptUnlockVault();
+        });
+
+        // -----------------------------------------------------------------
+        // 7. ENTERING & LOCKING THE SANCTUARY
+        // -----------------------------------------------------------------
+        function enterSanctuary() {
+            authGate.style.opacity = '0';
+            authGate.style.transform = 'scale(1.03)';
+            
+            setTimeout(() => {
+                authGate.classList.add('hidden');
+                vaultApp.classList.remove('hidden');
+                
+                // Update Bottom Left User Card
+                document.getElementById('current-user-name').textContent = activeUser.name;
+                const avatarEl = document.getElementById('current-user-avatar');
+                avatarEl.textContent = activeUser.initials;
+                avatarEl.className = `w-9 h-9 rounded-xl ${activeUser.avatarBg} flex items-center justify-center font-bold text-xs text-vault-abyss shrink-0 shadow-sm`;
+                
+                const crownEl = document.getElementById('current-user-crown');
+                crownEl.style.display = activeUser.role === 'Owner' ? 'inline-flex' : 'none';
+
+                renderChannels();
+                renderMemberRoster();
+                switchChannel(activeChannelId);
+
+                requestAnimationFrame(() => {
+                    vaultApp.style.opacity = '1';
+                });
+
+                showToast(
+                    `Vault Unsealed for ${activeUser.name}`,
+                    '4-Key E2EE session established. Zero external connections.',
+                    'unlock'
+                );
+            }, 450);
+        }
+
+        lockVaultBtn.addEventListener('click', () => {
+            vaultApp.style.opacity = '0';
+            setTimeout(() => {
+                vaultApp.classList.add('hidden');
+                authGate.classList.remove('hidden');
+                vaultPasskeyInput.value = '';
+                vaultLockIcon.setAttribute('data-lucide', 'lock');
+                vaultEmblemRing.classList.remove('shadow-gold-intense', 'scale-105');
+                document.getElementById('unlock-btn-text').textContent = 'Verify Key & Unseal Vault';
+                lucide.createIcons({ nodes: [vaultEmblemRing] });
+
+                requestAnimationFrame(() => {
+                    authGate.style.opacity = '1';
+                    authGate.style.transform = 'scale(1)';
+                });
+
+                showToast('Vault Sealed & Locked', 'Session keys cleared from active view.', 'lock');
+            }, 350);
+        });
+
+        // -----------------------------------------------------------------
+        // 8. SIDEBAR CHANNELS & 4-MEMBER ROSTER RENDERING
+        // -----------------------------------------------------------------
+        function renderChannels() {
+            channelListEl.innerHTML = CHANNELS.map(ch => {
+                const isActive = ch.id === activeChannelId;
+                return `
+                    <button 
+                        type="button"
+                        onclick="switchChannel('${ch.id}')"
+                        class="w-full px-3 py-2.5 rounded-xl flex items-center justify-between text-left transition-all cursor-pointer group ${
+                            isActive 
+                            ? 'bg-gradient-to-r from-vault-purple/75 to-vault-purple/30 text-white border border-vault-gold/30 shadow-sm' 
+                            : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent'
+                        }"
+                    >
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <i data-lucide="${ch.icon}" class="w-4 h-4 ${isActive ? 'text-vault-gold' : 'text-slate-500 group-hover:text-vault-gold/75'} shrink-0"></i>
+                            <span class="text-xs sm:text-sm font-medium truncate">${ch.name}</span>
+                        </div>
+                        ${isActive ? '<span class="w-1.5 h-1.5 rounded-full bg-vault-gold"></span>' : ''}
+                    </button>
+                `;
+            }).join('');
+            lucide.createIcons({ nodes: [channelListEl] });
+        }
+
+        function renderMemberRoster() {
+            memberRosterListEl.innerHTML = VAULT_MEMBERS.map(member => {
+                const isCurrent = activeUser && activeUser.id === member.id;
+                const isOnline = isCurrent || member.id === 'aditya';
+                return `
+                    <div class="p-2.5 rounded-xl bg-vault-navy/50 border border-white/5 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="relative shrink-0">
+                                <div class="w-8 h-8 rounded-xl ${member.avatarBg} flex items-center justify-center text-xs font-bold text-vault-abyss">
+                                    ${member.initials}
+                                </div>
+                                <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-vault-surface ${isOnline ? 'bg-emerald-400' : 'bg-slate-500'}"></span>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-xs font-medium text-slate-200 truncate">${member.name}</span>
+                                    ${member.role === 'Owner' ? '<i data-lucide="crown" class="w-3 h-3 text-vault-gold shrink-0" title="Owner"></i>' : ''}
+                                </div>
+                                <p class="text-[10px] font-mono text-slate-400 truncate">
+                                    ${isCurrent ? 'Active Session' : member.statusText}
+                                </p>
+                            </div>
+                        </div>
+                        <span class="px-1.5 py-0.5 rounded text-[9px] font-mono border ${member.badgeColor} shrink-0">
+                            E2EE
+                        </span>
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons({ nodes: [memberRosterListEl] });
+        }
+
+        window.switchChannel = function(channelId) {
+            activeChannelId = channelId;
+            const channel = CHANNELS.find(c => c.id === channelId);
+            
+            activeChannelTitle.textContent = channel.name;
+            activeChannelDesc.textContent = channel.desc;
+            activeChannelIcon.setAttribute('data-lucide', channel.icon);
+            messageInput.placeholder = `Write an encrypted note inside #${channel.name}...`;
+
+            // Toggle Voice Lounge panel
+            if (channel.id === 'voice-lounge') {
+                voiceLoungePanel.classList.remove('hidden');
+            } else {
+                voiceLoungePanel.classList.add('hidden');
+            }
+
+            // Close mobile sidebar if open
+            closeMobileSidebar();
+
+            renderChannels();
+            renderMessages();
+            lucide.createIcons({ nodes: [activeChannelIcon.parentElement] });
+        };
+
+        // -----------------------------------------------------------------
+        // 9. RENDERING ENCRYPTED MESSAGES (NO PRE-POPULATED COUSIN MSGS)
+        // -----------------------------------------------------------------
+        function renderMessages() {
+            const list = messagesByChannel[activeChannelId] || [];
+
+            if (list.length === 0) {
+                messagesContainer.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-center max-w-sm mx-auto py-12">
+                        <div class="w-14 h-14 rounded-2xl bg-vault-purple/40 border border-vault-gold/25 flex items-center justify-center text-vault-gold mb-4">
+                            <i data-lucide="lock" class="w-6 h-6"></i>
+                        </div>
+                        <h4 class="text-sm font-semibold text-white">Pristine Encrypted Chamber</h4>
+                        <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                            No messages yet. Everything shared here is sealed exclusively for Aditya, Avnish, Nikita, and Abhishek.
+                        </p>
+                    </div>
+                `;
+                lucide.createIcons({ nodes: [messagesContainer] });
+                return;
+            }
+
+            messagesContainer.innerHTML = list.map(msg => {
+                if (msg.type === 'system') {
+                    return `
+                        <div class="flex justify-center my-2 msg-enter">
+                            <div class="max-w-lg px-4 py-2.5 rounded-2xl bg-vault-surface/90 border border-vault-gold/20 text-center flex items-center gap-2.5 shadow-sm">
+                                <i data-lucide="shield-check" class="w-4 h-4 text-vault-gold shrink-0"></i>
+                                <span class="text-[11px] font-mono text-slate-300 leading-relaxed">${msg.text}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const senderMeta = VAULT_MEMBERS.find(m => m.id === msg.senderId) || VAULT_MEMBERS[0];
+                const isOwner = senderMeta.role === 'Owner';
+
+                return `
+                    <div id="msg-${msg.id}" class="flex items-start gap-3.5 max-w-3xl msg-enter group">
+                        <div class="w-9 h-9 rounded-xl ${senderMeta.avatarBg} flex items-center justify-center text-xs font-bold text-vault-abyss shrink-0 mt-0.5 shadow-sm">
+                            ${senderMeta.initials}
+                        </div>
+
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-xs sm:text-sm font-semibold text-white">${senderMeta.name}</span>
+                                ${isOwner ? `
+                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono bg-vault-gold/15 text-vault-gold border border-vault-gold/30">
+                                        <i data-lucide="crown" class="w-2.5 h-2.5"></i> OWNER
+                                    </span>
+                                ` : `
+                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-vault-purple/50 text-slate-300 border border-white/10">
+                                        KEYHOLDER
+                                    </span>
+                                `}
+                                <span class="text-[10px] font-mono text-slate-500">${msg.timestamp}</span>
+                                ${msg.ephemeral ? `
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-mono text-amber-400">
+                                        <i data-lucide="flame" class="w-3 h-3"></i> 30s Ephemeral
+                                    </span>
+                                ` : ''}
+                            </div>
+
+                            <!-- Encrypted Bubble -->
+                            <div class="p-3.5 sm:p-4 rounded-2xl rounded-tl-sm ${msg.ephemeral ? 'bg-vault-surface/90 ephemeral-border' : 'vault-glass-purple'} text-xs sm:text-sm text-slate-100 leading-relaxed shadow-sm">
+                                ${msg.text ? `<p class="whitespace-pre-wrap break-words">${escapeHTML(msg.text)}</p>` : ''}
+                                
+                                ${msg.moment ? `
+                                    <div class="${msg.text ? 'mt-3 pt-3 border-t border-white/10' : ''} flex items-center gap-3 p-3 rounded-xl bg-vault-navy/80 border border-vault-gold/25">
+                                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-vault-purple to-vault-navy border border-vault-gold/35 flex items-center justify-center text-vault-gold shrink-0">
+                                            <i data-lucide="${msg.moment.icon}" class="w-5 h-5"></i>
+                                        </div>
+                                        <div class="min-w-0">
+                                            <p class="text-xs font-semibold text-vault-gold">${escapeHTML(msg.moment.title)}</p>
+                                            <p class="text-[11px] text-slate-400 truncate">${escapeHTML(msg.moment.caption)}</p>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons({ nodes: [messagesContainer] });
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // -----------------------------------------------------------------
+        // 10. SENDING MESSAGES, MOMENTS & EPHEMERAL SELF-DESTRUCT
+        // -----------------------------------------------------------------
+        const SAMPLE_MOMENTS = [
+            {
+                icon: 'sparkles',
+                title: 'Vault Milestone // Focus & Discipline',
+                caption: 'Sealed personal progress snapshot for the 4-key circle.'
+            },
+            {
+                icon: 'moon',
+                title: 'Midnight Sanctuary Note',
+                caption: 'Quiet reflection stored under AES-256 vault lock.'
+            },
+            {
+                icon: 'shield',
+                title: 'Cousin Circle Check-In',
+                caption: 'Verified encrypted memory shared privately.'
+            }
+        ];
+        let momentCycleIndex = 0;
+
+        attachMomentBtn.addEventListener('click', () => {
+            pendingMoment = SAMPLE_MOMENTS[momentCycleIndex % SAMPLE_MOMENTS.length];
+            momentCycleIndex++;
+            momentPreviewTitle.textContent = pendingMoment.title;
+            momentPreviewSub.textContent = pendingMoment.caption;
+            momentPreviewBar.classList.remove('hidden');
+        });
+
+        clearMomentBtn.addEventListener('click', () => {
+            pendingMoment = null;
+            momentPreviewBar.classList.add('hidden');
+        });
+
+        toggleEphemeralBtn.addEventListener('click', () => {
+            isEphemeralMode = !isEphemeralMode;
+            ephemeralBanner.classList.toggle('hidden', !isEphemeralMode);
+            toggleEphemeralBtn.classList.toggle('text-vault-gold', isEphemeralMode);
+            toggleEphemeralBtn.classList.toggle('bg-vault-gold/15', isEphemeralMode);
+        });
+
+        disableEphemeralBtn.addEventListener('click', () => {
+            isEphemeralMode = false;
+            ephemeralBanner.classList.add('hidden');
+            toggleEphemeralBtn.classList.remove('text-vault-gold', 'bg-vault-gold/15');
+        });
+
+        messageForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = messageInput.value.trim();
+            if (!text && !pendingMoment) return;
+
+            const sender = activeUser || VAULT_MEMBERS[0];
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const msgId = 'msg-' + Date.now();
+            const currentChannelSnapshot = activeChannelId;
+            const ephemeralSnapshot = isEphemeralMode;
+
+            const newMessage = {
+                id: msgId,
+                senderId: sender.id,
+                senderName: sender.name,
+                senderRole: sender.role,
+                text: text,
+                timestamp: timeStr,
+                ephemeral: ephemeralSnapshot,
+                moment: pendingMoment
+            };
+
+            if (!messagesByChannel[currentChannelSnapshot]) {
+                messagesByChannel[currentChannelSnapshot] = [];
+            }
+            messagesByChannel[currentChannelSnapshot].push(newMessage);
+
+            // Persist non-ephemeral messages locally
+            if (!ephemeralSnapshot) {
+                localStorage.setItem('vibevault_messages_v1', JSON.stringify(messagesByChannel));
+            }
+
+            // Reset inputs
+            messageInput.value = '';
+            pendingMoment = null;
+            momentPreviewBar.classList.add('hidden');
+
+            renderMessages();
+
+            // Handle 30-second self-destruct if ephemeral
+            if (ephemeralSnapshot) {
+                showToast('Ephemeral Whisper Sent', 'Message will vanish automatically in 30 seconds.', 'flame');
+                setTimeout(() => {
+                    messagesByChannel[currentChannelSnapshot] = (messagesByChannel[currentChannelSnapshot] || []).filter(m => m.id !== msgId);
+                    if (activeChannelId === currentChannelSnapshot) {
+                        renderMessages();
+                    }
+                }, 30000);
+            }
+        });
+
+        // -----------------------------------------------------------------
+        // 11. VOICE LOUNGE & AMBIENT AUDIO CONTROLS
+        // -----------------------------------------------------------------
+        joinVoiceBtn.addEventListener('click', () => {
+            isVoiceConnected = !isVoiceConnected;
+            if (isVoiceConnected) {
+                joinVoiceBtn.innerHTML = `<i data-lucide="phone-off" class="w-3.5 h-3.5"></i><span>Leave Lounge</span>`;
+                joinVoiceBtn.classList.remove('bg-vault-gold', 'text-vault-abyss');
+                joinVoiceBtn.classList.add('bg-rose-500/20', 'text-rose-300', 'border', 'border-rose-500/40');
+                showToast('Acoustic Tunnel Active', 'Connected to private 4-key voice lounge.', 'mic');
+            } else {
+                joinVoiceBtn.innerHTML = `<i data-lucide="mic" class="w-3.5 h-3.5"></i><span>Connect Audio</span>`;
+                joinVoiceBtn.classList.add('bg-vault-gold', 'text-vault-abyss');
+                joinVoiceBtn.classList.remove('bg-rose-500/20', 'text-rose-300', 'border', 'border-rose-500/40');
+                showToast('Acoustic Tunnel Closed', 'Disconnected from voice lounge.', 'mic-off');
+            }
+            lucide.createIcons({ nodes: [joinVoiceBtn] });
+        });
+
+        // Soft Web Audio API Sanctuary Drone (Zero external URLs)
+        toggleAmbientAudioBtn.addEventListener('click', () => {
+            if (!isAmbientPlaying) {
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    audioCtx = new AudioContext();
+                    ambientOsc = audioCtx.createOscillator();
+                    ambientGain = audioCtx.createGain();
+
+                    ambientOsc.type = 'sine';
+                    ambientOsc.frequency.setValueAtTime(110, audioCtx.currentTime); // Deep calm A2 hum
+                    ambientGain.gain.setValueAtTime(0.025, audioCtx.currentTime);
+
+                    ambientOsc.connect(ambientGain);
+                    ambientGain.connect(audioCtx.destination);
+                    ambientOsc.start();
+
+                    isAmbientPlaying = true;
+                    ambientStatusBadge.textContent = 'ON';
+                    ambientStatusBadge.className = 'font-mono text-[10px] px-2 py-0.5 rounded bg-vault-gold/20 text-vault-gold';
+                    showToast('Soft Vault Hum Enabled', 'Subtle low-frequency calm ambience active.', 'volume-2');
+                } catch (err) {
+                    showToast('Audio Notice', 'Browser blocked audio context initialization.', 'alert-circle');
+                }
+            } else {
+                if (ambientOsc) {
+                    ambientOsc.stop();
+                    ambientOsc.disconnect();
+                }
+                if (audioCtx) {
+                    audioCtx.close();
+                }
+                isAmbientPlaying = false;
+                ambientStatusBadge.textContent = 'OFF';
+                ambientStatusBadge.className = 'font-mono text-[10px] px-2 py-0.5 rounded bg-vault-navy text-slate-400';
+            }
+        });
+
+        clearLocalHistoryBtn.addEventListener('click', () => {
+            messagesByChannel = getDefaultMessages();
+            localStorage.setItem('vibevault_messages_v1', JSON.stringify(messagesByChannel));
+            renderMessages();
+            showToast('Chamber Cache Reset', 'Restored pristine default vault initialization state.', 'eraser');
+        });
+
+        // -----------------------------------------------------------------
+        // 12. RESPONSIVE SIDEBAR & SECURITY INSPECTOR DRAWERS
+        // -----------------------------------------------------------------
+        function openMobileSidebar() {
+            leftSidebar.classList.remove('-translate-x-full');
+            mobileSidebarBackdrop.classList.remove('hidden');
+        }
+        function closeMobileSidebar() {
+            leftSidebar.classList.add('-translate-x-full');
+            mobileSidebarBackdrop.classList.add('hidden');
+        }
+
+        openSidebarBtn.addEventListener('click', openMobileSidebar);
+        closeSidebarBtn.addEventListener('click', closeMobileSidebar);
+        mobileSidebarBackdrop.addEventListener('click', closeMobileSidebar);
+
+        toggleInspectorBtn.addEventListener('click', () => {
+            if (window.innerWidth < 1280) {
+                securityInspector.classList.toggle('hidden');
+                securityInspector.classList.toggle('fixed');
+                securityInspector.classList.toggle('inset-y-0');
+                securityInspector.classList.toggle('right-0');
+                securityInspector.classList.toggle('z-30');
+                securityInspector.classList.toggle('flex');
+            } else {
+                securityInspector.classList.toggle('xl:flex');
+                securityInspector.classList.toggle('hidden');
+            }
+        });
+
+        closeInspectorBtn.addEventListener('click', () => {
+            securityInspector.classList.add('hidden');
+            securityInspector.classList.remove('fixed', 'inset-y-0', 'right-0', 'z-30', 'flex');
+        });
+
+        // -----------------------------------------------------------------
+        // 13. INITIALIZE ON LOAD
+        // -----------------------------------------------------------------
+        window.addEventListener('DOMContentLoaded', () => {
+    renderAuthMemberGrid();
+
+    selectAuthMember('Aditya');
+    selectAuthMember('Avnish');
+    selectAuthMember('Abhishek');
+    selectAuthMember('Nikita');
+
+    lucide.createIcons();
+});
+    </script>
+</body>
+</html>
